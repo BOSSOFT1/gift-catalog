@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>伴手礼目录 · 管理后台</title>
+<link rel="icon" href="data:,">
+<style>
+:root{
+  --ad-navy:#0a1f3d; --ad-gold:#b8935a; --ad-gold-soft:#f0e6d3;
+  --ad-bg:#f5f4f1; --ad-card:#ffffff; --ad-line:#e8e5dd; --ad-line-2:#ddd9d0;
+  --ad-ink:#1c1c1e; --ad-stone:#6b6b6b; --ad-mist:#9a9a9a;
+  --ad-danger:#b3402e; --ad-ok:#2e7d4f;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;background:var(--ad-bg);color:var(--ad-ink);font-size:14px;line-height:1.6}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,textarea,select{font-family:inherit;font-size:14px;color:var(--ad-ink);border:1px solid var(--ad-line-2);border-radius:6px;padding:7px 10px;background:#fff;width:100%}
+input:focus,textarea:focus,select:focus{outline:2px solid rgba(184,147,90,.4);border-color:var(--ad-gold)}
+textarea{resize:vertical;min-height:52px}
+
+/* ===== 登录遮罩 ===== */
+#lockScreen{position:fixed;inset:0;background:linear-gradient(155deg,#0a1f3d,#061a30);z-index:200;display:flex;align-items:center;justify-content:center}
+#lockScreen .lock-card{background:#fff;border-radius:14px;padding:34px 38px;width:320px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+#lockScreen h1{font-size:19px;color:var(--ad-navy);margin-bottom:6px;letter-spacing:.04em}
+#lockScreen .lock-sub{font-size:12px;color:var(--ad-mist);margin-bottom:20px}
+#lockScreen input{text-align:center;letter-spacing:.4em;font-size:20px;padding:10px;margin-bottom:14px}
+#lockScreen .lock-hint{font-size:11px;color:var(--ad-mist);margin-top:12px;line-height:1.7}
+#lockScreen .lock-err{font-size:12px;color:var(--ad-danger);min-height:18px;margin-bottom:6px}
+
+/* ===== 顶部工具条 ===== */
+#toolbar{position:sticky;top:0;z-index:120;background:var(--ad-navy);color:#fff;display:flex;align-items:center;gap:10px;padding:10px 16px;flex-wrap:wrap}
+#toolbar .tb-title{font-size:15px;font-weight:700;letter-spacing:.05em;margin-right:6px}
+#toolbar .tb-sub{font-size:11px;color:rgba(255,255,255,.6);margin-right:auto}
+#toolbar .tb-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:7px;padding:7px 13px;font-size:13px;transition:.2s}
+#toolbar .tb-btn:hover{background:rgba(255,255,255,.22)}
+#toolbar .tb-btn.gold{background:var(--ad-gold);border-color:var(--ad-gold);color:#fff;font-weight:600}
+#toolbar .tb-btn.gold:hover{background:#c8a86e}
+#draftState{font-size:12px;color:var(--ad-gold-soft)}
+
+/* ===== 主布局 ===== */
+#main{display:grid;grid-template-columns:220px 1fr;gap:0;height:calc(100vh - 60px)}
+#catPane{border-right:1px solid var(--ad-line);background:#faf9f7;overflow-y:auto;padding:12px 10px}
+#catPane h3,#rightPane h3{font-size:12px;color:var(--ad-mist);letter-spacing:.12em;margin:6px 4px 10px;font-weight:600}
+#rightPane{overflow-y:auto;padding:14px 18px 60px}
+
+/* 分类项 */
+.cat-item{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:8px;cursor:pointer;margin-bottom:3px;transition:.15s;border:1px solid transparent}
+.cat-item:hover{background:#efece5}
+.cat-item.sel{background:#fff;border-color:var(--ad-gold);box-shadow:0 2px 8px rgba(10,31,61,.08)}
+.cat-item .ci-name{flex:1;min-width:0;font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cat-item .ci-count{font-size:11px;color:var(--ad-mist);background:#eeece6;border-radius:10px;padding:0 7px}
+.cat-item .ci-act{display:flex;gap:2px;opacity:0;transition:.15s}
+.cat-item:hover .ci-act{opacity:1}
+.cat-item .ci-act button{font-size:11px;color:var(--ad-stone);padding:2px 5px;border-radius:4px}
+.cat-item .ci-act button:hover{background:var(--ad-gold-soft);color:var(--ad-navy)}
+.cat-item .ci-act button.del:hover{background:#f5ddd7;color:var(--ad-danger)}
+.ad-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:13px;border:1px solid var(--ad-line-2);background:#fff;color:var(--ad-navy);transition:.15s}
+.ad-btn:hover{border-color:var(--ad-gold);color:var(--ad-gold)}
+.ad-btn.primary{background:var(--ad-navy);color:#fff;border-color:var(--ad-navy)}
+.ad-btn.primary:hover{background:#12305c}
+.ad-btn.danger{color:var(--ad-danger);border-color:#ecc9c0}
+.ad-btn.danger:hover{background:#fdf0ed}
+.ad-btn.sm{padding:5px 10px;font-size:12px;border-radius:6px}
+.ad-btn.block{width:100%;justify-content:center;margin-top:10px}
+
+/* 产品列表 */
+#prodToolbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+#prodToolbar .pt-title{font-size:16px;font-weight:700;color:var(--ad-navy);margin-right:auto}
+.prod-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid transparent;margin-bottom:3px}
+.prod-item:hover{background:#efece5}
+.prod-item.sel{background:#fff;border-color:var(--ad-gold);box-shadow:0 2px 8px rgba(10,31,61,.08)}
+.prod-item .pi-thumb{width:38px;height:38px;border-radius:6px;overflow:hidden;background:#eeece6;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.prod-item .pi-thumb img{width:100%;height:100%;object-fit:contain}
+.prod-item .pi-thumb .noimg{font-size:9px;color:var(--ad-mist)}
+.prod-item .pi-info{flex:1;min-width:0}
+.prod-item .pi-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prod-item .pi-meta{font-size:11px;color:var(--ad-mist)}
+.prod-item .pi-act{display:flex;gap:2px;opacity:0}
+.prod-item:hover .pi-act{opacity:1}
+.prod-item .pi-act button{font-size:11px;color:var(--ad-stone);padding:2px 5px;border-radius:4px}
+.prod-item .pi-act button:hover{background:var(--ad-gold-soft);color:var(--ad-navy)}
+.prod-item .pi-act button.del:hover{background:#f5ddd7;color:var(--ad-danger)}
+
+/* 编辑面板 */
+#editor{position:sticky;top:14px;background:#fff;border:1px solid var(--ad-line);border-radius:12px;padding:18px;margin-top:16px;box-shadow:0 4px 16px rgba(10,31,61,.06)}
+#editor .ed-title{font-size:14px;font-weight:700;color:var(--ad-navy);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--ad-line-soft)}
+#editor .field{margin-bottom:12px}
+#editor .field label{display:block;font-size:12px;color:var(--ad-stone);margin-bottom:5px;font-weight:500}
+#editor .field .hint{font-size:11px;color:var(--ad-mist)}
+#editor .img-row{display:flex;gap:12px;align-items:flex-start}
+#editor .img-preview{width:96px;height:96px;border-radius:8px;overflow:hidden;background:#f0efe9;border:1px dashed var(--ad-line-2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#editor .img-preview img{width:100%;height:100%;object-fit:contain}
+#editor .img-preview .noimg{font-size:11px;color:var(--ad-mist);text-align:center;padding:8px}
+#editor .img-btns{display:flex;flex-direction:column;gap:8px;flex:1}
+#editor .img-note{font-size:11px;color:var(--ad-mist);line-height:1.6}
+#editor .form-foot{display:flex;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--ad-line-soft)}
+#editor.empty .ed-placeholder{text-align:center;color:var(--ad-mist);padding:40px 10px;font-size:13px}
+#editor .cat-cfg{background:#faf9f7;border:1px solid var(--ad-line);border-radius:10px;padding:14px;margin-bottom:14px}
+#editor .cat-cfg h4{font-size:12px;color:var(--ad-navy);margin-bottom:10px;letter-spacing:.05em}
+#editor .cat-cfg .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* Modal */
+.modal-mask{position:fixed;inset:0;background:rgba(10,31,61,.5);z-index:150;display:none;align-items:center;justify-content:center}
+.modal-mask.show{display:flex}
+.modal{background:#fff;border-radius:14px;padding:24px 26px;width:440px;max-width:92vw;max-height:86vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.modal h3{font-size:16px;color:var(--ad-navy);margin-bottom:16px}
+.modal .field{margin-bottom:12px}
+.modal .field label{display:block;font-size:12px;color:var(--ad-stone);margin-bottom:5px;font-weight:500}
+.modal .modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+
+/* 预览 */
+#previewOverlay{position:fixed;inset:0;background:#14171c;z-index:180;display:none;flex-direction:column}
+#previewOverlay.show{display:flex}
+#previewOverlay .pv-bar{background:#1e2229;color:#fff;display:flex;align-items:center;gap:8px;padding:10px 16px}
+#previewOverlay .pv-bar .pv-title{font-size:14px;font-weight:600;margin-right:auto}
+#previewOverlay .pv-bar button{background:rgba(255,255,255,.12);color:#fff;border-radius:6px;padding:6px 12px;font-size:12px}
+#previewOverlay .pv-bar button.on{background:var(--ad-gold);color:#fff}
+#previewOverlay .pv-body{flex:1;overflow:auto;padding:20px;display:flex;justify-content:center}
+#previewOverlay iframe{background:#fff;border:none;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);width:390px;height:100%;transition:width .25s}
+
+/* Toast */
+#toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ad-navy);color:#fff;padding:11px 20px;border-radius:30px;font-size:13px;opacity:0;pointer-events:none;transition:.3s;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:86vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.hidden{display:none !important}
+</style>
+</head>
+<body>
+
+<!-- ===== 登录遮罩 ===== -->
+<div id="lockScreen">
+  <div class="lock-card">
+    <h1>伴手礼目录 · 管理后台</h1>
+    <div class="lock-sub">请输入管理密码</div>
+    <input type="password" id="pinInput" placeholder="密码" maxlength="20" autocomplete="off">
+    <div class="lock-err" id="pinErr"></div>
+    <button class="ad-btn primary block" id="pinBtn">进入后台</button>
+    <div class="lock-hint">初始密码：123456<br>建议登录后立即在右上角修改密码</div>
+  </div>
+</div>
+
+<!-- ===== 顶部工具条 ===== -->
+<div id="toolbar">
+  <span class="tb-title">伴手礼目录 · 管理后台</span>
+  <span class="tb-sub">改完点「保存到线上」立即全端生效；也可导出 JSON 备份</span>
+  <span id="draftState"></span>
+  <button class="tb-btn gold" id="btnOnline">保存到线上</button>
+  <button class="tb-btn" id="btnOnlineCfg">在线设置</button>
+  <button class="tb-btn" id="btnMeta">站点信息</button>
+  <button class="tb-btn gold" id="btnPreview">预览</button>
+  <button class="tb-btn" id="btnExport">导出 JSON</button>
+  <button class="tb-btn" id="btnImport">导入</button>
+  <button class="tb-btn" id="btnPin">修改密码</button>
+  <button class="tb-btn" id="btnLock">锁定</button>
+</div>
+
+<!-- ===== 主布局 ===== -->
+<div id="main">
+  <div id="catPane">
+    <h3>产品分类</h3>
+    <div id="catList"></div>
+    <button class="ad-btn block" id="btnAddCat">+ 新增分类</button>
+  </div>
+  <div id="rightPane">
+    <div id="prodToolbar">
+      <span class="pt-title" id="curCatTitle">—</span>
+      <button class="ad-btn sm" id="btnAddProd">+ 新增产品</button>
+      <button class="ad-btn sm" id="btnDelCat">删除本分类</button>
+    </div>
+    <div id="prodList"></div>
+    <div id="editor" class="empty">
+      <div class="ed-placeholder">点击左侧产品进行编辑</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 站点信息 Modal ===== -->
+<div class="modal-mask" id="metaModal">
+  <div class="modal">
+    <h3>站点信息</h3>
+    <div class="field"><label>主标题（白色部分）</label><input id="mTitleA"></div>
+    <div class="field"><label>主标题高亮（金色部分）</label><input id="mTitleB"></div>
+    <div class="field"><label>英文角标</label><input id="mMark"></div>
+    <div class="field"><label>副标题</label><input id="mSubtitle"></div>
+    <div class="field"><label>公告栏文字</label><input id="mNotice"></div>
+    <div class="field"><label>首页简介文字</label><textarea id="mIntro"></textarea></div>
+    <div class="modal-foot">
+      <button class="ad-btn" id="metaCancel">取消</button>
+      <button class="ad-btn primary" id="metaSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 修改密码 Modal ===== -->
+<div class="modal-mask" id="pinModal">
+  <div class="modal">
+    <h3>修改管理密码</h3>
+    <div class="field"><label>当前密码</label><input type="password" id="pOld"></div>
+    <div class="field"><label>新密码</label><input type="password" id="pNew"></div>
+    <div class="field"><label>确认新密码</label><input type="password" id="pNew2"></div>
+    <div class="modal-foot">
+      <button class="ad-btn" id="pinCancel">取消</button>
+      <button class="ad-btn primary" id="pinSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 在线保存设置 ===== -->
+<div class="modal-mask" id="onlineModal">
+  <div class="modal">
+    <h3>在线保存设置</h3>
+    <p style="font-size:12px;color:#7d90ab;margin:0 0 12px;line-height:1.7">把修改同步到线上，需要填写云函数地址和保存密码。地址形如 <b style="color:#4a5b74">https://你的环境ID.service.tcloudbase.com/products</b>，保存密码与部署指南第 4 步设置的 ADMIN_TOKEN 一致。</p>
+    <div class="field"><label>API 地址（云函数 URL）</label><input id="ocApi" placeholder="https://xxx.service.tcloudbase.com/products"></div>
+    <div class="field"><label>保存密码（ADMIN_TOKEN）<span class="hint">　部署时在云函数环境变量中设置</span></label><input id="ocToken" type="password"></div>
+    <div class="modal-foot">
+      <button class="ad-btn" id="ocCancel">取消</button>
+      <button class="ad-btn" id="ocTest">测试连接</button>
+      <button class="ad-btn primary" id="ocSave">保存设置</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 预览 ===== -->
+<div id="previewOverlay">
+  <div class="pv-bar">
+    <span class="pv-title">预览（与线上页面完全一致）</span>
+    <button data-w="390">手机</button>
+    <button data-w="768">平板</button>
+    <button data-w="full">桌面</button>
+    <button id="pvClose">关闭</button>
+  </div>
+  <div class="pv-body"><iframe id="pvFrame" title="预览"></iframe></div>
+</div>
+
+<input type="file" id="fileImport" accept=".json,application/json" class="hidden">
+<input type="file" id="fileImg" accept="image/*" class="hidden">
+
+<!-- ========== 线上页面素材（text/plain，用于预览，与 index.html 完全一致） ========== -->
+<script type="text/plain" id="tpl-css">
+
+
+
+
+
+/* ========== Design System ========== */
+:root {
+  --navy-deep: #0a1f3d;
+  --navy: #1a365d;
+  --navy-mid: #2d4a7c;
+  --gold: #b8935a;
+  --gold-light: #d4b27e;
+  --gold-soft: #f0e6d3;
+  --ink: #1c1c1e;
+  --stone: #6b6b6b;
+  --mist: #9a9a9a;
+  --bg: #f8f7f4;
+  --card: #ffffff;
+  --line: #e8e5dd;
+  --line-soft: #f0eee8;
+  --radius-sm: 6px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --shadow: 0 1px 8px rgba(10, 31, 61, 0.05);
+  --shadow-hover: 0 4px 20px rgba(10, 31, 61, 0.1);
+  --transition: 0.25s ease;
+  --ts-xs: 11px;
+  --ts-sm: 13px;
+  --ts-base: 15px;
+  --ts-md: 17px;
+  --ts-lg: 22px;
+  --ts-xl: 30px;
+  --ts-2xl: 30px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: var(--ts-base);
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  padding-bottom: 40px;
+}
+a { text-decoration: none; color: inherit; }
+ul { list-style: none; }
+img { max-width: 100%; display: block; }
+
+/* ========== Hero ========== */
+.hero {
+  position: relative;
+  background: linear-gradient(155deg, var(--navy-deep) 0%, #061a30 50%, #03101f 100%);
+  padding: 56px 24px 48px;
+  text-align: center;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -20%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(184, 147, 90, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.hero-mark {
+  display: inline-block;
+  font-size: var(--ts-sm);
+  letter-spacing: 0.35em;
+  color: var(--gold-light);
+  margin-bottom: 18px;
+  font-weight: 300;
+  opacity: 0;
+  animation: fadeUp 0.6s ease 0.1s forwards;
+}
+.hero-title {
+  font-family: "Noto Serif SC", serif;
+  font-size: var(--ts-2xl);
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.06em;
+  margin-bottom: 14px;
+  line-height: 1.3;
+  opacity: 0;
+  animation: fadeUp 0.6s ease 0.25s forwards;
+}
+.hero-title span { color: var(--gold-light); }
+.hero-sub {
+  font-size: var(--ts-sm);
+  color: rgba(255,255,255,0.65);
+  letter-spacing: 0.15em;
+  font-weight: 300;
+  opacity: 0;
+  animation: fadeUp 0.6s ease 0.4s forwards;
+}
+.hero-divider {
+  width: 36px;
+  height: 2px;
+  background: var(--gold);
+  margin: 24px auto 0;
+  opacity: 0;
+  animation: fadeUp 0.6s ease 0.55s forwards;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========== Notice Bar ========== */
+.notice-bar {
+  background: linear-gradient(90deg, #fff9e6, #fff4d1);
+  border-bottom: 1px solid var(--gold-soft);
+  padding: 12px 20px;
+  text-align: center;
+}
+.notice-text {
+  font-size: var(--ts-xs);
+  color: var(--navy);
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  max-width: 760px;
+  margin: 0 auto;
+}
+.notice-text::before {
+  content: '※';
+  color: var(--gold);
+  margin-right: 6px;
+}
+
+/* ========== Sticky Nav ========== */
+.cat-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(248, 247, 244, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.cat-nav-scroll {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 12px;
+}
+.cat-nav-scroll::-webkit-scrollbar { display: none; }
+.cat-nav-item {
+  flex-shrink: 0;
+  padding: 14px 16px;
+  font-size: var(--ts-sm);
+  font-weight: 500;
+  color: var(--stone);
+  white-space: nowrap;
+  position: relative;
+  transition: color var(--transition);
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+.cat-nav-item.active { color: var(--navy-deep); }
+.cat-nav-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: var(--gold);
+  border-radius: 1px;
+}
+
+/* ========== Intro ========== */
+.intro {
+  padding: 36px 24px 8px;
+  text-align: center;
+}
+.intro-label {
+  font-size: var(--ts-xs);
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+.intro-text {
+  font-family: "Noto Serif SC", serif;
+  font-size: var(--ts-md);
+  line-height: 1.8;
+  color: var(--ink);
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+/* ========== Section ========== */
+.section {
+  padding: 36px 16px 8px;
+  scroll-margin-top: 48px;
+}
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 0 8px;
+}
+.section-num {
+  font-family: "Noto Serif SC", serif;
+  font-size: var(--ts-lg);
+  font-weight: 700;
+  color: var(--gold);
+  line-height: 1;
+  opacity: 0.7;
+}
+.section-title {
+  font-family: "Noto Serif SC", serif;
+  font-size: var(--ts-lg);
+  font-weight: 700;
+  color: var(--navy-deep);
+  letter-spacing: 0.05em;
+}
+.section-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--line), transparent);
+}
+
+/* ========== Product Grid ========== */
+.grid { display: grid; gap: 10px; }
+.grid-1 { grid-template-columns: 1fr; }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+
+/* ========== Product Card ========== */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  transition: box-shadow var(--transition), border-color var(--transition);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.card:hover {
+  box-shadow: var(--shadow-hover);
+  border-color: var(--gold-soft);
+}
+.card-img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 6px;
+  background: linear-gradient(135deg, #f5f4f1, #ebe9e2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+}
+.card-img-placeholder {
+  font-size: var(--ts-xs);
+  color: var(--mist);
+  letter-spacing: 0.05em;
+}
+.card-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--navy);
+  background: rgba(26, 54, 93, 0.06);
+  padding: 2px 8px;
+  border-radius: 4px;
+  align-self: flex-start;
+  margin-bottom: 2px;
+}
+.card-name {
+  font-size: var(--ts-sm);
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.card-spec {
+  font-size: var(--ts-xs);
+  color: var(--mist);
+  line-height: 1.45;
+}
+.card-foot {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 4px;
+}
+.card-price {
+  font-family: "Noto Serif SC", serif;
+  font-size: var(--ts-md);
+  font-weight: 700;
+  color: var(--gold);
+}
+.card-price .yen { font-size: var(--ts-xs); font-weight: 400; }
+.card-unit { font-size: 10px; color: var(--mist); }
+.card-unit.tax {
+  color: var(--gold);
+  border: 1px solid var(--gold-soft);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+/* Discount card */
+.card-discount { gap: 6px; }
+.discount-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--ts-xs);
+}
+.discount-label { color: var(--mist); }
+.discount-val {
+  font-family: "Noto Serif SC", serif;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+/* Fumao timeline card */
+.fumao-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.fumao-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.fumao-card:hover { border-color: var(--gold-soft); box-shadow: var(--shadow); }
+.fumao-year {
+  font-family: "Noto Serif SC", serif;
+  font-size: var(--ts-md);
+  font-weight: 700;
+  color: var(--navy-deep);
+}
+.fumao-label { font-size: var(--ts-xs); color: var(--mist); margin-top: 2px; }
+.fumao-price {
+  font-family: "Noto Serif SC", serif;
+  font-size: var(--ts-md);
+  font-weight: 700;
+  color: var(--gold);
+}
+.fumao-price .yen { font-size: var(--ts-xs); font-weight: 400; }
+.fumao-price-wrap { text-align: right; }
+.fumao-pre {
+  font-size: 10px;
+  color: var(--mist);
+  margin-top: 3px;
+  white-space: nowrap;
+}
+
+/* Wide cards (seafood, ftq) */
+.card-wide { grid-column: 1 / -1; }
+.seafood-layout, .ftq-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.seafood-layout .card-img, .ftq-layout .card-img {
+  width: 120px;
+  flex-shrink: 0;
+  aspect-ratio: 1 / 1;
+  margin-bottom: 0;
+}
+.seafood-body, .ftq-body { flex: 1; min-width: 0; }
+
+/* Reveal animation */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.reveal.show { opacity: 1; transform: translateY(0); }
+
+/* Responsive */
+@media (min-width: 640px) {
+  .hero { padding: 80px 24px 64px; }
+  .hero-title { font-size: 38px; letter-spacing: 0.05em; }
+  .hero-sub { font-size: 16px; }
+  .intro-text { font-size: 19px; max-width: 560px; }
+  .section { padding: 48px 24px 8px; }
+  .grid-2 { grid-template-columns: repeat(3, 1fr); }
+  .grid-1 { grid-template-columns: repeat(2, 1fr); }
+  .fumao-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .seafood-layout .card-img, .ftq-layout .card-img { width: 160px; }
+}
+
+@media (min-width: 1024px) {
+  .grid-2 { grid-template-columns: repeat(4, 1fr); }
+  .grid-1 { grid-template-columns: repeat(3, 1fr); }
+  .fumao-grid { grid-template-columns: repeat(5, 1fr); }
+  .section { max-width: 1100px; margin: 0 auto; }
+  .seafood-layout .card-img, .ftq-layout .card-img { width: 200px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+  .reveal { opacity: 1; transform: none; }
+  html { scroll-behavior: auto; }
+}
+
+
+
+
+
+</script>
+<script type="text/plain" id="tpl-body">
+
+<!-- ========== Hero ========== -->
+<header class="hero">
+  <div class="hero-mark" id="heroMark"></div>
+  <h1 class="hero-title" id="heroTitle"></h1>
+  <p class="hero-sub" id="heroSub"></p>
+  <div class="hero-divider"></div>
+</header>
+
+<!-- ========== Notice Bar ========== -->
+<div class="notice-bar">
+  <p class="notice-text" id="noticeText"></p>
+</div>
+
+<!-- ========== Category Nav ========== -->
+<nav class="cat-nav" aria-label="产品分类导航">
+  <div class="cat-nav-scroll" id="catNav"></div>
+</nav>
+
+<!-- ========== Intro ========== -->
+<section class="intro" id="intro">
+  <div class="intro-label">ABOUT</div>
+  <p class="intro-text" id="introText"></p>
+</section>
+
+<div id="sections"></div>
+
+
+
+</script>
+<script type="text/plain" id="tpl-renderjs">
+
+(function() {
+"use strict";
+
+var DATA_API = '';
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function fmtPrice(v) {
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'string') return v;
+  var n = Number(v);
+  if (!isFinite(n)) return null;
+  if (Number.isInteger(n)) return String(n);
+  return String(n.toFixed(2).replace(/\.?0+$/, ''));
+}
+
+function imgHtml(img, name) {
+  if (!img) return '<div class="card-img"><div class="card-img-placeholder">暂无图片</div></div>';
+  return '<div class="card-img"><img src="' + esc(img) + '" alt="' + esc(name) + '" loading="lazy"></div>';
+}
+
+function specHtml(spec, maxLines) {
+  if (!spec) return '';
+  var limit = maxLines || 99;
+  var lines = String(spec).split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+  var html = lines.slice(0, limit).map(function(l) { return esc(l); }).join('<br>');
+  if (lines.length > limit) html += '<br><span class="card-spec-more">...</span>';
+  return '<p class="card-spec">' + html + '</p>';
+}
+
+function footHtml(price, unit, pre) {
+  var p = fmtPrice(price);
+  if (p === null) return '<div class="card-foot"><span class="card-unit">价格面议</span></div>';
+  var html = '<div class="card-foot"><span class="card-price"><span class="yen">¥</span>' + esc(p) + '</span>';
+  if (unit) html += '<span class="card-unit">' + esc(unit) + '</span>';
+  if (pre !== null && pre !== undefined && pre !== '' && fmtPrice(pre) !== null) {
+    html += '<span class="card-unit tax">不含税 ¥' + esc(fmtPrice(pre)) + '</span>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderWine(c, p) {
+  var badge = /奔富/.test(p.name) ? '奔富' : '红酒';
+  var tier = '';
+  if (typeof p.price_incl === 'number') {
+    tier = p.price_incl < 300 ? '入门臻选' : (p.price_incl < 800 ? '进阶佳酿' : '名庄珍藏');
+  }
+  var spec = String(p.spec || '').replace('750ml/瓶', '750ml');
+  return '<div class="card reveal">' + imgHtml(p.img, p.name)
+    + '<span class="card-badge">' + esc(badge) + ' · ' + esc(tier) + '</span>'
+    + '<p class="card-name">' + esc(p.name) + '</p>'
+    + specHtml(spec)
+    + footHtml(p.price_incl, c.unit, p.price_pre) + '</div>';
+}
+
+function renderFumao(c, p) {
+  var year = p.name.indexOf('(') >= 0 ? String(p.name).split('(').pop().replace(')', '') : '';
+  var label = c.fumao_label || '53度福矛窖酒·5';
+  var preHtml = '';
+  if (typeof p.price_pre === 'number') {
+    preHtml = '<div class="fumao-pre">不含税 ¥' + esc(fmtPrice(p.price_pre)) + '</div>';
+  }
+  return '<div class="fumao-card reveal">'
+    + '<div><div class="fumao-year">' + esc(year) + '</div>'
+    + '<div class="fumao-label">' + esc(label) + '</div></div>'
+    + '<div class="fumao-price-wrap"><div class="fumao-price"><span class="yen">¥</span>' + esc(fmtPrice(p.price_incl)) + '</div>' + preHtml + '</div></div>';
+}
+
+function renderTea(c, p) {
+  var price = fmtPrice(p.price_incl);
+  var isDiscount = typeof p.price_incl === 'string' && p.price_incl.indexOf('折') >= 0;
+  if (isDiscount) {
+    var brand = String(p.name).replace('全系产品', '') + '全系';
+    return '<div class="card reveal card-discount">' + imgHtml(p.img, p.name)
+      + '<p class="card-name">' + esc(brand) + '</p>'
+      + '<div class="discount-row"><span class="discount-label">采购折扣</span><span class="discount-val">' + esc(price) + '</span></div>'
+      + specHtml(p.spec) + '</div>';
+  }
+  var badge = '茶叶';
+  if (/白茶/.test(p.name)) badge = '政和白茶';
+  else if (/茉莉/.test(p.name) || /春伦/.test(p.name)) badge = '茉莉花茶';
+  else if (/窖/.test(p.name)) badge = '窖藏茶';
+  return '<div class="card reveal">' + imgHtml(p.img, p.name)
+    + '<span class="card-badge">' + esc(badge) + '</span>'
+    + '<p class="card-name">' + esc(p.name) + '</p>'
+    + specHtml(p.spec)
+    + footHtml(p.price_incl, c.unit, p.price_pre) + '</div>';
+}
+
+function renderCigarette(c, p) {
+  return '<div class="card reveal">' + imgHtml(p.img, p.name)
+    + '<span class="card-badge">' + esc(c.badge || '名烟') + '</span>'
+    + '<p class="card-name">' + esc(p.name) + '</p>'
+    + specHtml(p.spec)
+    + footHtml(p.price_incl, c.unit, p.price_pre) + '</div>';
+}
+
+function renderStandard(c, p) {
+  return '<div class="card reveal">' + imgHtml(p.img, p.name)
+    + '<span class="card-badge">' + esc(c.badge || '精选') + '</span>'
+    + '<p class="card-name">' + esc(p.name) + '</p>'
+    + specHtml(p.spec)
+    + footHtml(p.price_incl, c.unit, p.price_pre) + '</div>';
+}
+
+function renderSeafood(c, p) {
+  return '<div class="card reveal card-wide"><div class="seafood-layout">'
+    + imgHtml(p.img, p.name)
+    + '<div class="seafood-body">'
+    + '<span class="card-badge">' + esc(c.badge || '海鲜礼盒') + '</span>'
+    + '<p class="card-name">' + esc(p.name) + '</p>'
+    + specHtml(p.spec, 6)
+    + footHtml(p.price_incl, '', p.price_pre)
+    + '</div></div></div>';
+}
+
+function renderFtq(c, p) {
+  return '<div class="card reveal card-wide"><div class="ftq-layout">'
+    + imgHtml(p.img, p.name)
+    + '<div class="ftq-body">'
+    + '<span class="card-badge">' + esc(c.badge || '佛跳墙') + '</span>'
+    + '<p class="card-name">' + esc(p.name) + '</p>'
+    + specHtml(p.spec, 5)
+    + footHtml(p.price_incl, c.unit, p.price_pre)
+    + '</div></div></div>';
+}
+
+var RENDERERS = {
+  wine: renderWine, fumao: renderFumao, tea: renderTea,
+  cigarette: renderCigarette, standard: renderStandard,
+  seafood: renderSeafood, ftq: renderFtq
+};
+
+function bindNav() {
+  var navItems = document.querySelectorAll('.cat-nav-item');
+  var sections = {};
+  navItems.forEach(function(item) {
+    var target = item.getAttribute('data-target');
+    var el = document.getElementById(target);
+    if (el) sections[target] = el;
+  });
+
+  navItems.forEach(function(item) {
+    item.addEventListener('click', function() {
+      var target = this.getAttribute('data-target');
+      var el = sections[target];
+      if (el) {
+        var navHeight = document.querySelector('.cat-nav').offsetHeight;
+        var top = el.offsetTop - navHeight - 8;
+        window.scrollTo({ top: top, behavior: 'smooth' });
+      }
+    });
+  });
+
+  var isScrolling = false;
+  function updateActive() {
+    if (isScrolling) return;
+    var scrollY = window.scrollY + 80;
+    var current = 'intro';
+    for (var key in sections) {
+      if (sections[key].offsetTop <= scrollY) current = key;
+    }
+    navItems.forEach(function(item) {
+      var target = item.getAttribute('data-target');
+      if (target === current) {
+        item.classList.add('active');
+        var navScroll = document.getElementById('catNav');
+        var itemLeft = item.offsetLeft;
+        var itemWidth = item.offsetWidth;
+        var navWidth = navScroll.offsetWidth;
+        navScroll.scrollTo({ left: itemLeft - navWidth / 2 + itemWidth / 2, behavior: 'smooth' });
+      } else {
+        item.classList.remove('active');
+      }
+    });
+  }
+
+  var scrollTimer;
+  window.addEventListener('scroll', function() {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(updateActive, 10);
+  }, { passive: true });
+
+  navItems.forEach(function(item) {
+    item.addEventListener('click', function() {
+      isScrolling = true;
+      setTimeout(function() { isScrolling = false; }, 800);
+    });
+  });
+}
+
+function initReveal() {
+  var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReduced || !('IntersectionObserver' in window)) {
+    document.querySelectorAll('.reveal').forEach(function(el) { el.classList.add('show'); });
+    return;
+  }
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        var delay = Array.from(entry.target.parentNode.children).indexOf(entry.target) * 40;
+        setTimeout(function() { entry.target.classList.add('show'); }, Math.min(delay, 300));
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
+}
+
+function render(data) {
+  var meta = data.meta || {};
+  document.title = (meta.title_a || '') + (meta.title_b || '');
+  var desc = document.querySelector('meta[name="description"]');
+  if (desc && meta.desc) desc.setAttribute('content', meta.desc);
+
+  document.getElementById('heroMark').textContent = meta.mark || '';
+  document.getElementById('heroTitle').innerHTML = esc(meta.title_a || '') + '<span>' + esc(meta.title_b || '') + '</span>';
+  document.getElementById('heroSub').textContent = meta.subtitle || '';
+  document.getElementById('noticeText').textContent = meta.notice || '';
+  document.getElementById('introText').textContent = meta.intro || '';
+
+  var cats = data.categories || [];
+  var nav = ['<button class="cat-nav-item active" data-target="intro">首页</button>'];
+  cats.forEach(function(c) {
+    nav.push('<button class="cat-nav-item" data-target="' + esc(c.id) + '">' + esc(c.nav) + '</button>');
+  });
+  document.getElementById('catNav').innerHTML = nav.join('\n    ');
+
+  var secs = [];
+  cats.forEach(function(c) {
+    var renderer = RENDERERS[c.layout] || renderStandard;
+    var cards = (c.products || []).map(function(p) { return renderer(c, p); }).join('\n    ');
+    secs.push(
+      '<!-- ========== ' + c.title + ' ========== -->\n' +
+      '<section class="section" id="' + esc(c.id) + '">' +
+      '<div class="section-head"><span class="section-num">' + esc(c.num) + '</span>' +
+      '<h2 class="section-title">' + esc(c.title) + '</h2>' +
+      '<span class="section-line"></span></div>' +
+      '<div class="grid ' + esc(c.grid) + '">' + cards + '</div></section>'
+    );
+  });
+  document.getElementById('sections').innerHTML = secs.join('\n');
+
+  bindNav();
+  initReveal();
+}
+
+function boot(embedded) {
+  if (location.protocol === 'file:') { render(embedded); return; }
+  // 数据源优先级：远程 API（部署时烧入或 ?api= 覆盖）→ products.json → 内嵌数据
+  var api = DATA_API || '';
+  if (!api && location.search) {
+    var m = location.search.match(/[?&]api=([^&]+)/);
+    if (m) api = decodeURIComponent(m[1]);
+  }
+  var sources = [];
+  if (api) sources.push(api);
+  sources.push('products.json');
+  var i = 0;
+  function next() {
+    if (i >= sources.length) { render(embedded); return; }
+    var url = sources[i++];
+    fetch(url, { cache: 'no-cache' }).then(function(r) {
+      if (!r.ok) throw new Error('bad status ' + r.status);
+      return r.json();
+    }).then(function(d) {
+      if (d && (d.meta || d.categories)) render(d);
+      else throw new Error('unexpected shape');
+    }).catch(function() { next(); });
+  }
+  next();
+}
+
+var EMBEDDED = {"meta": {"title_a": "行政甄选 · ", "title_b": "商务接待名品目录", "mark": "ADMINISTRATIVE SELECTION", "subtitle": "臻选闽都好礼 · 商务馈赠首选", "notice": "商品价格及库存供应可能随市场波动而变动，具体以实际成交时为准", "intro": "汇聚闽都八大地域特色品类，从名庄红酒到非遗手作，为商务接待与往来馈赠提供得体之选。", "desc": "行政甄选 · 商务接待名品目录 — 红酒、福茅窖酒、茶叶、名烟、保健品、同利肉燕、生鲜、佛跳墙等精选伴手礼。"}, "categories": [{"id": "wine", "nav": "红酒", "title": "红酒系列", "num": "01", "layout": "wine", "grid": "grid-2", "badge": "红酒", "unit": "含税", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "奔富一号法国红葡萄酒", "spec": "750ml/瓶", "price_pre": 150, "price_incl": 150, "img": "assets/image37.jpg"}, {"name": "奔富BIN6赤霞珠设拉子红葡萄酒", "spec": "750ml/瓶", "price_pre": 205, "price_incl": 205, "img": "assets/image67.png"}, {"name": "奔富 28 卡琳娜色拉子红葡萄酒", "spec": "750ml/瓶", "price_pre": 208, "price_incl": 210, "img": "assets/image60.jpg"}, {"name": "奔富 128 库纳瓦拉色拉子红葡萄酒", "spec": "750ml/瓶", "price_pre": 292, "price_incl": 295, "img": "assets/image60.jpg"}, {"name": "奔富特瓶 LOT518 白酒加度葡萄酒配制酒", "spec": "750ml/瓶", "price_pre": 400, "price_incl": 400, "img": "assets/image66.jpg"}, {"name": "奔富 389 加本纳色拉子红葡萄酒", "spec": "750ml/瓶", "price_pre": 450, "price_incl": 450, "img": "assets/image61.jpg"}, {"name": "奔富亭诺桃红香槟", "spec": "750ml/瓶", "price_pre": 510, "price_incl": 510, "img": "assets/image69.png"}, {"name": "奔富BIN18A阿德莱德霞多丽白葡萄酒", "spec": "750ml/瓶", "price_pre": 550, "price_incl": 550, "img": "assets/image70.png"}, {"name": "奔富CWT521红葡萄酒", "spec": "750ml/瓶", "price_pre": 570, "price_incl": 570, "img": "assets/image71.png"}, {"name": "奔富 407 赤霞珠红葡萄酒", "spec": "750ml/瓶", "price_pre": 670, "price_incl": 670, "img": "assets/image62.jpg"}, {"name": "奔富 RWT 巴罗萨山谷色拉子红葡萄酒", "spec": "750ml/瓶", "price_pre": 850, "price_incl": 850, "img": "assets/image63.jpg"}, {"name": "奔富BIN144雅塔娜霞多丽白葡萄酒", "spec": "750ml/瓶", "price_pre": 860, "price_incl": 860, "img": "assets/image72.png"}, {"name": "奔富 707 赤霞珠红葡萄酒", "spec": "750ml/瓶", "price_pre": 3000, "price_incl": 3000, "img": "assets/image64.jpg"}, {"name": "葛兰许红葡萄酒", "spec": "750ml/瓶", "price_pre": 4000, "price_incl": 4000, "img": "assets/image65.jpg"}]}, {"id": "fumao", "nav": "福茅", "title": "福茅窖酒", "num": "02", "layout": "fumao", "grid": "fumao-grid", "badge": "", "unit": "", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "53度福矛窖酒·5(2026年)", "spec": "500ml/瓶", "price_pre": 365, "price_incl": 368, "img": "assets/image38.jpg"}, {"name": "53度福矛窖酒·5(2025年)", "spec": "500ml/瓶", "price_pre": 385, "price_incl": 388, "img": "assets/image39.jpg"}, {"name": "53度福矛窖酒·5(2024年)", "spec": "500ml/瓶", "price_pre": 405, "price_incl": 408, "img": "assets/image40.jpg"}, {"name": "53度福矛窖酒·5(2023年)", "spec": "500ml瓶", "price_pre": 425, "price_incl": 428, "img": "assets/image41.jpg"}, {"name": "53度福矛窖酒·5(2022年)", "spec": "500ml/瓶", "price_pre": 455, "price_incl": 458, "img": "assets/image42.jpg"}, {"name": "53度福矛窖酒·5(2021年)", "spec": "500ml/瓶", "price_pre": 485, "price_incl": 488, "img": "assets/image43.jpg"}, {"name": "53度福矛窖酒·5(2020年)", "spec": "500ml/瓶", "price_pre": 535, "price_incl": 538, "img": "assets/image44.jpg"}, {"name": "53度福矛窖酒·5(2019年)", "spec": "500ml/瓶", "price_pre": 580, "price_incl": 588, "img": "assets/image45.jpg"}, {"name": "53度福矛窖酒·5(2018年)", "spec": "500ml/瓶", "price_pre": 630, "price_incl": 638, "img": "assets/image46.jpg"}, {"name": "53度福矛窖酒·5(2017年)", "spec": "500ml/瓶", "price_pre": 700, "price_incl": 708, "img": "assets/image47.jpg"}, {"name": "53度福矛窖酒·5(2016年)", "spec": "500ml/瓶", "price_pre": 760, "price_incl": 768, "img": "assets/image48.jpg"}, {"name": "53度福矛窖酒·5(2015年)", "spec": "500ml/瓶", "price_pre": 850, "price_incl": 859, "img": "assets/image49.jpg"}, {"name": "53度福矛窖酒·5(2014年)", "spec": "500ml/瓶", "price_pre": 930, "price_incl": 939, "img": "assets/image50.jpg"}, {"name": "53度福矛窖酒·5(2013年)", "spec": "500ml/瓶", "price_pre": 1050, "price_incl": 1059, "img": "assets/image51.jpg"}, {"name": "53度福矛窖酒·5(2012年)", "spec": "500ml/瓶", "price_pre": 1250, "price_incl": 1259, "img": "assets/image52.jpg"}, {"name": "53度福矛窖酒·5(2011年)", "spec": "500ml/瓶", "price_pre": 1460, "price_incl": 1469, "img": "assets/image53.jpg"}, {"name": "53度福矛窖酒·5(2010年)", "spec": "500ml/瓶", "price_pre": 1680, "price_incl": 1689, "img": "assets/image54.jpg"}, {"name": "53度福矛窖酒·5(2009年)", "spec": "500ml/瓶", "price_pre": 1980, "price_incl": 1999, "img": "assets/image55.jpg"}, {"name": "53度福矛窖酒·5(2008年)", "spec": "500ml/瓶", "price_pre": 2280, "price_incl": 2299, "img": "assets/image56.jpg"}, {"name": "53度福矛窖酒·5(2007年)", "spec": "500ml/瓶", "price_pre": 2580, "price_incl": 2599, "img": "assets/image57.jpg"}, {"name": "53度福矛窖酒·5(2006年)", "spec": "500ml/瓶", "price_pre": 2970, "price_incl": 2999, "img": "assets/image58.jpg"}, {"name": "53度福矛窖酒·5(2005年)", "spec": "500ml/瓶", "price_pre": 3365, "price_incl": 3399, "img": "assets/image59.jpg"}]}, {"id": "tea", "nav": "茶叶", "title": "茶叶系列", "num": "03", "layout": "tea", "grid": "grid-2", "badge": "茶叶", "unit": "", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "瑞泉全系产品", "spec": "", "price_pre": null, "price_incl": "5.2 折", "img": "assets/image31.jpg"}, {"name": "溪谷全系产品", "spec": "", "price_pre": null, "price_incl": "4.7 折", "img": "assets/image32.jpg"}, {"name": "岩霸全系产品", "spec": "", "price_pre": null, "price_incl": "4 折", "img": "assets/image33.jpg"}, {"name": "熹茗全系产品", "spec": "", "price_pre": null, "price_incl": "6.5折", "img": "assets/image34.jpg"}, {"name": "瑞芳全系产品", "spec": "", "price_pre": null, "price_incl": "4.2 折", "img": "assets/image35.jpg"}, {"name": "武夷星全系产品", "spec": "", "price_pre": null, "price_incl": "6折", "img": "assets/image36.jpg"}, {"name": "政和白茶", "spec": "特级白毫银针（250g/盒）", "price_pre": 414, "price_incl": 468, "img": "assets/image27.jpg"}, {"name": "政和白茶", "spec": "特级牡丹王（250g/盒）", "price_pre": 503, "price_incl": 568, "img": "assets/image28.jpg"}, {"name": "茉莉花", "spec": "春伦茉莉御针30g(5g*6泡)", "price_pre": 618, "price_incl": 698, "img": "assets/image29.jpg"}, {"name": "茉莉花", "spec": "春伦云朵茉莉花茶126g（3.5g*36泡）", "price_pre": 326, "price_incl": 368, "img": "assets/image30.jpg"}, {"name": "茶仙捌窖", "spec": "4g*24袋", "price_pre": 1770, "price_incl": 2000, "img": "assets/image13.jpg"}, {"name": "珍宝柒窖", "spec": "4g*24袋", "price_pre": 619, "price_incl": 700, "img": "assets/image14.jpg"}, {"name": "陆合陆窖", "spec": "4g*24袋", "price_pre": 619, "price_incl": 700, "img": "assets/image15.jpg"}, {"name": "伍福伍窖", "spec": "4g*24袋", "price_pre": 193, "price_incl": 218, "img": "assets/image16.jpg"}]}, {"id": "cigarette", "nav": "名烟", "title": "名烟系列", "num": "04", "layout": "cigarette", "grid": "grid-2", "badge": "名烟", "unit": "/条", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "古田（金中支）", "spec": "10包/条", "price_pre": 381, "price_incl": 430, "img": "assets/image7.jpg"}, {"name": "金砖(中支）", "spec": "10包/条", "price_pre": 659, "price_incl": 745, "img": "assets/image8.jpg"}, {"name": "金砖(细支）", "spec": "10包/条", "price_pre": 527, "price_incl": 595, "img": "assets/image9.jpg"}, {"name": "古田纯青", "spec": "10包/条", "price_pre": 429, "price_incl": 485, "img": "assets/image10.jpg"}, {"name": "古田成功细支", "spec": "10包/条", "price_pre": 602, "price_incl": 680, "img": "assets/image11.jpg"}, {"name": "古田成功中支", "spec": "10包/条", "price_pre": 606, "price_incl": 685, "img": "assets/image12.jpg"}]}, {"id": "health", "nav": "保健", "title": "保健品系列", "num": "05", "layout": "standard", "grid": "grid-2", "badge": "保健", "unit": "", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "片仔癀", "spec": "3g / 粒", "price_pre": 527, "price_incl": 595, "img": "assets/image26.jpg"}, {"name": "肝保", "spec": "60粒/盒", "price_pre": 558, "price_incl": 630, "img": "assets/image25.jpg"}]}, {"id": "rouyan", "nav": "肉燕鱼丸", "title": "同利肉燕及鱼丸", "num": "06", "layout": "standard", "grid": "grid-2", "badge": "闽味小吃", "unit": "", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "肉燕", "spec": "536g/袋", "price_pre": 38, "price_incl": 43, "img": "assets/image17.jpg"}, {"name": "太平燕", "spec": "536g/袋", "price_pre": 38, "price_incl": 43, "img": "assets/image18.jpg"}, {"name": "香菇燕", "spec": "251g/袋", "price_pre": 22, "price_incl": 25, "img": "assets/image19.jpg"}, {"name": "虾燕", "spec": "251g/袋", "price_pre": 31, "price_incl": 35, "img": "assets/image20.jpg"}, {"name": "鱼丸", "spec": "256g/袋", "price_pre": 20, "price_incl": 23, "img": "assets/image22.jpg"}, {"name": "牛肉滑", "spec": "250g/袋", "price_pre": 25, "price_incl": 28, "img": "assets/image21.jpg"}, {"name": "鲜燕丝", "spec": "250g/袋", "price_pre": 20, "price_incl": 23, "img": "assets/image23.jpg"}, {"name": "鲜燕皮", "spec": "500g", "price_pre": 44, "price_incl": 50, "img": "assets/image24.jpg"}]}, {"id": "seafood", "nav": "生鲜", "title": "生鲜系列", "num": "07", "layout": "seafood", "grid": "grid-1", "badge": "海鲜礼盒", "unit": "", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "2026款时来运转礼盒（A38）", "spec": "三去黄花鱼1000g/包\n三文鱼500g/包 \n清蒸黄花鱼455g/包 \n东海鲳鱼（2条）450g/包东海带鱼段1000g/包\n 比目鱼300g/包\n蒲烧鳗鱼400g/包\n速冻去脏鲍鱼230g/包\n速冻鱿鱼400g/包\n 银鳕鱼片300g/包 \n单冻刺参250g/包\n北极甜虾500g/包", "price_pre": 922, "price_incl": 953, "img": "assets/image73.png"}, {"name": "2026款财华无限礼盒（A5）", "spec": "三去黄花鱼700g/包\n速冻鱿鱼400g/包 \n东海带鱼段1000g/包\n东海鲳鱼（3条）450g/包\n蒲烧鳗鱼180g/包\n比目鱼300g/包\n醇香黄鱼鲞400g/包\n熟冻黑虎虾300g/包\n扇贝柱300g/包 \n速冻去脏鲍鱼230g/包", "price_pre": 515, "price_incl": 533, "img": "assets/image74.png"}, {"name": "2026款大吉大利礼盒（A37）", "spec": "清蒸黄花鱼455g/包\n清蒸海鲈鱼555g/包\n 白灼对虾400g/包\n东海鲳鱼（3条）450g/包醇香黄鱼鲞350g/包\n蒲烧鳗鱼段180g/包\n速冻去脏鲍鱼230g/包", "price_pre": 347, "price_incl": 359, "img": "assets/image75.png"}, {"name": "2026款海鲜家宴礼盒（A34）", "spec": "三去海鲈鱼450g/包\n三去黄花鱼450g/包\n蒲烧鳗鱼段180g/包\n海捕小鱿鱼350g/包\n白灼对虾400g/包\n东海鲳鱼（5条）550g/包", "price_pre": 289, "price_incl": 299, "img": "assets/image76.png"}, {"name": "非遗黄鱼鲞（干）礼盒1.04kg(A70)", "spec": "黄鱼鲞（干）260g/4包", "price_pre": 289, "price_incl": 299, "img": "assets/image77.jpg"}, {"name": "野化黄花鱼礼盒1.3kg（A40）", "spec": "野化黄花鱼650g/2包", "price_pre": 176, "price_incl": 180, "img": "assets/image1.png"}]}, {"id": "ftq", "nav": "佛跳墙", "title": "佛跳墙系列", "num": "08", "layout": "ftq", "grid": "grid-1", "badge": "佛跳墙", "unit": "含税", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "十参十鲍龙虾(带锅带礼盒)", "spec": "海参(刺参)25g\n  鲍鱼(黑边肉)9-11g\n龙虾1只\n辅材：杏鲍菇、虾味丸、竹耳丝、花菇、鱼胶、螺片、鲍汁", "price_pre": 255, "price_incl": 258, "img": "assets/image2.jpg"}, {"name": "十参十鲍十虾(刺参黑边肉)", "spec": "海参(刺参)25g\n鲍鱼(黑边肉)9-11g\n虾10只\n辅材：杏鲍菇、虾味丸、竹耳丝、花菇、花胶、螺片、鲍汁", "price_pre": 196, "price_incl": 198, "img": "assets/image3.jpg"}, {"name": "刺参鲍鱼花胶鸡", "spec": "半只三黄鸡\n6只海参(刺参)20-25g\n6只鲍鱼(黑边肉)11-13g\n辅材：鱼胶、虾丸、金汤", "price_pre": 166, "price_incl": 168, "img": "assets/image4.jpg"}, {"name": "A款至尊款罐装佛跳墙(辽参)", "spec": "220g*6罐（\n海参（辽参），黄金鲍，金钩翅，元贝，鱼胶，猪蹄，花菇，杏鲍菇）", "price_pre": 394, "price_incl": 398, "img": "assets/image5.jpg"}, {"name": "B款富贵罐装佛跳墙(辽参)", "spec": "220g*6罐（海参（辽参），黄金鲍，花胶，扇贝，香菇，素鱼翅，杏鲍菇）", "price_pre": 295, "price_incl": 298, "img": "assets/image6.jpg"}]}]};
+boot(EMBEDDED);
+
+})();
+
+</script>
+<script type="text/plain" id="tpl-embedded">{"meta": {"title_a": "行政甄选 · ", "title_b": "商务接待名品目录", "mark": "ADMINISTRATIVE SELECTION", "subtitle": "臻选闽都好礼 · 商务馈赠首选", "notice": "商品价格及库存供应可能随市场波动而变动，具体以实际成交时为准", "intro": "汇聚闽都八大地域特色品类，从名庄红酒到非遗手作，为商务接待与往来馈赠提供得体之选。", "desc": "行政甄选 · 商务接待名品目录 — 红酒、福茅窖酒、茶叶、名烟、保健品、同利肉燕、生鲜、佛跳墙等精选伴手礼。"}, "categories": [{"id": "wine", "nav": "红酒", "title": "红酒系列", "num": "01", "layout": "wine", "grid": "grid-2", "badge": "红酒", "unit": "含税", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "奔富一号法国红葡萄酒", "spec": "750ml/瓶", "price_pre": 150, "price_incl": 150, "img": "assets/image37.jpg"}, {"name": "奔富BIN6赤霞珠设拉子红葡萄酒", "spec": "750ml/瓶", "price_pre": 205, "price_incl": 205, "img": "assets/image67.png"}, {"name": "奔富 28 卡琳娜色拉子红葡萄酒", "spec": "750ml/瓶", "price_pre": 208, "price_incl": 210, "img": "assets/image60.jpg"}, {"name": "奔富 128 库纳瓦拉色拉子红葡萄酒", "spec": "750ml/瓶", "price_pre": 292, "price_incl": 295, "img": "assets/image60.jpg"}, {"name": "奔富特瓶 LOT518 白酒加度葡萄酒配制酒", "spec": "750ml/瓶", "price_pre": 400, "price_incl": 400, "img": "assets/image66.jpg"}, {"name": "奔富 389 加本纳色拉子红葡萄酒", "spec": "750ml/瓶", "price_pre": 450, "price_incl": 450, "img": "assets/image61.jpg"}, {"name": "奔富亭诺桃红香槟", "spec": "750ml/瓶", "price_pre": 510, "price_incl": 510, "img": "assets/image69.png"}, {"name": "奔富BIN18A阿德莱德霞多丽白葡萄酒", "spec": "750ml/瓶", "price_pre": 550, "price_incl": 550, "img": "assets/image70.png"}, {"name": "奔富CWT521红葡萄酒", "spec": "750ml/瓶", "price_pre": 570, "price_incl": 570, "img": "assets/image71.png"}, {"name": "奔富 407 赤霞珠红葡萄酒", "spec": "750ml/瓶", "price_pre": 670, "price_incl": 670, "img": "assets/image62.jpg"}, {"name": "奔富 RWT 巴罗萨山谷色拉子红葡萄酒", "spec": "750ml/瓶", "price_pre": 850, "price_incl": 850, "img": "assets/image63.jpg"}, {"name": "奔富BIN144雅塔娜霞多丽白葡萄酒", "spec": "750ml/瓶", "price_pre": 860, "price_incl": 860, "img": "assets/image72.png"}, {"name": "奔富 707 赤霞珠红葡萄酒", "spec": "750ml/瓶", "price_pre": 3000, "price_incl": 3000, "img": "assets/image64.jpg"}, {"name": "葛兰许红葡萄酒", "spec": "750ml/瓶", "price_pre": 4000, "price_incl": 4000, "img": "assets/image65.jpg"}]}, {"id": "fumao", "nav": "福茅", "title": "福茅窖酒", "num": "02", "layout": "fumao", "grid": "fumao-grid", "badge": "", "unit": "", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "53度福矛窖酒·5(2026年)", "spec": "500ml/瓶", "price_pre": 365, "price_incl": 368, "img": "assets/image38.jpg"}, {"name": "53度福矛窖酒·5(2025年)", "spec": "500ml/瓶", "price_pre": 385, "price_incl": 388, "img": "assets/image39.jpg"}, {"name": "53度福矛窖酒·5(2024年)", "spec": "500ml/瓶", "price_pre": 405, "price_incl": 408, "img": "assets/image40.jpg"}, {"name": "53度福矛窖酒·5(2023年)", "spec": "500ml瓶", "price_pre": 425, "price_incl": 428, "img": "assets/image41.jpg"}, {"name": "53度福矛窖酒·5(2022年)", "spec": "500ml/瓶", "price_pre": 455, "price_incl": 458, "img": "assets/image42.jpg"}, {"name": "53度福矛窖酒·5(2021年)", "spec": "500ml/瓶", "price_pre": 485, "price_incl": 488, "img": "assets/image43.jpg"}, {"name": "53度福矛窖酒·5(2020年)", "spec": "500ml/瓶", "price_pre": 535, "price_incl": 538, "img": "assets/image44.jpg"}, {"name": "53度福矛窖酒·5(2019年)", "spec": "500ml/瓶", "price_pre": 580, "price_incl": 588, "img": "assets/image45.jpg"}, {"name": "53度福矛窖酒·5(2018年)", "spec": "500ml/瓶", "price_pre": 630, "price_incl": 638, "img": "assets/image46.jpg"}, {"name": "53度福矛窖酒·5(2017年)", "spec": "500ml/瓶", "price_pre": 700, "price_incl": 708, "img": "assets/image47.jpg"}, {"name": "53度福矛窖酒·5(2016年)", "spec": "500ml/瓶", "price_pre": 760, "price_incl": 768, "img": "assets/image48.jpg"}, {"name": "53度福矛窖酒·5(2015年)", "spec": "500ml/瓶", "price_pre": 850, "price_incl": 859, "img": "assets/image49.jpg"}, {"name": "53度福矛窖酒·5(2014年)", "spec": "500ml/瓶", "price_pre": 930, "price_incl": 939, "img": "assets/image50.jpg"}, {"name": "53度福矛窖酒·5(2013年)", "spec": "500ml/瓶", "price_pre": 1050, "price_incl": 1059, "img": "assets/image51.jpg"}, {"name": "53度福矛窖酒·5(2012年)", "spec": "500ml/瓶", "price_pre": 1250, "price_incl": 1259, "img": "assets/image52.jpg"}, {"name": "53度福矛窖酒·5(2011年)", "spec": "500ml/瓶", "price_pre": 1460, "price_incl": 1469, "img": "assets/image53.jpg"}, {"name": "53度福矛窖酒·5(2010年)", "spec": "500ml/瓶", "price_pre": 1680, "price_incl": 1689, "img": "assets/image54.jpg"}, {"name": "53度福矛窖酒·5(2009年)", "spec": "500ml/瓶", "price_pre": 1980, "price_incl": 1999, "img": "assets/image55.jpg"}, {"name": "53度福矛窖酒·5(2008年)", "spec": "500ml/瓶", "price_pre": 2280, "price_incl": 2299, "img": "assets/image56.jpg"}, {"name": "53度福矛窖酒·5(2007年)", "spec": "500ml/瓶", "price_pre": 2580, "price_incl": 2599, "img": "assets/image57.jpg"}, {"name": "53度福矛窖酒·5(2006年)", "spec": "500ml/瓶", "price_pre": 2970, "price_incl": 2999, "img": "assets/image58.jpg"}, {"name": "53度福矛窖酒·5(2005年)", "spec": "500ml/瓶", "price_pre": 3365, "price_incl": 3399, "img": "assets/image59.jpg"}]}, {"id": "tea", "nav": "茶叶", "title": "茶叶系列", "num": "03", "layout": "tea", "grid": "grid-2", "badge": "茶叶", "unit": "", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "瑞泉全系产品", "spec": "", "price_pre": null, "price_incl": "5.2 折", "img": "assets/image31.jpg"}, {"name": "溪谷全系产品", "spec": "", "price_pre": null, "price_incl": "4.7 折", "img": "assets/image32.jpg"}, {"name": "岩霸全系产品", "spec": "", "price_pre": null, "price_incl": "4 折", "img": "assets/image33.jpg"}, {"name": "熹茗全系产品", "spec": "", "price_pre": null, "price_incl": "6.5折", "img": "assets/image34.jpg"}, {"name": "瑞芳全系产品", "spec": "", "price_pre": null, "price_incl": "4.2 折", "img": "assets/image35.jpg"}, {"name": "武夷星全系产品", "spec": "", "price_pre": null, "price_incl": "6折", "img": "assets/image36.jpg"}, {"name": "政和白茶", "spec": "特级白毫银针（250g/盒）", "price_pre": 414, "price_incl": 468, "img": "assets/image27.jpg"}, {"name": "政和白茶", "spec": "特级牡丹王（250g/盒）", "price_pre": 503, "price_incl": 568, "img": "assets/image28.jpg"}, {"name": "茉莉花", "spec": "春伦茉莉御针30g(5g*6泡)", "price_pre": 618, "price_incl": 698, "img": "assets/image29.jpg"}, {"name": "茉莉花", "spec": "春伦云朵茉莉花茶126g（3.5g*36泡）", "price_pre": 326, "price_incl": 368, "img": "assets/image30.jpg"}, {"name": "茶仙捌窖", "spec": "4g*24袋", "price_pre": 1770, "price_incl": 2000, "img": "assets/image13.jpg"}, {"name": "珍宝柒窖", "spec": "4g*24袋", "price_pre": 619, "price_incl": 700, "img": "assets/image14.jpg"}, {"name": "陆合陆窖", "spec": "4g*24袋", "price_pre": 619, "price_incl": 700, "img": "assets/image15.jpg"}, {"name": "伍福伍窖", "spec": "4g*24袋", "price_pre": 193, "price_incl": 218, "img": "assets/image16.jpg"}]}, {"id": "cigarette", "nav": "名烟", "title": "名烟系列", "num": "04", "layout": "cigarette", "grid": "grid-2", "badge": "名烟", "unit": "/条", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "古田（金中支）", "spec": "10包/条", "price_pre": 381, "price_incl": 430, "img": "assets/image7.jpg"}, {"name": "金砖(中支）", "spec": "10包/条", "price_pre": 659, "price_incl": 745, "img": "assets/image8.jpg"}, {"name": "金砖(细支）", "spec": "10包/条", "price_pre": 527, "price_incl": 595, "img": "assets/image9.jpg"}, {"name": "古田纯青", "spec": "10包/条", "price_pre": 429, "price_incl": 485, "img": "assets/image10.jpg"}, {"name": "古田成功细支", "spec": "10包/条", "price_pre": 602, "price_incl": 680, "img": "assets/image11.jpg"}, {"name": "古田成功中支", "spec": "10包/条", "price_pre": 606, "price_incl": 685, "img": "assets/image12.jpg"}]}, {"id": "health", "nav": "保健", "title": "保健品系列", "num": "05", "layout": "standard", "grid": "grid-2", "badge": "保健", "unit": "", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "片仔癀", "spec": "3g / 粒", "price_pre": 527, "price_incl": 595, "img": "assets/image26.jpg"}, {"name": "肝保", "spec": "60粒/盒", "price_pre": 558, "price_incl": 630, "img": "assets/image25.jpg"}]}, {"id": "rouyan", "nav": "肉燕鱼丸", "title": "同利肉燕及鱼丸", "num": "06", "layout": "standard", "grid": "grid-2", "badge": "闽味小吃", "unit": "", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "肉燕", "spec": "536g/袋", "price_pre": 38, "price_incl": 43, "img": "assets/image17.jpg"}, {"name": "太平燕", "spec": "536g/袋", "price_pre": 38, "price_incl": 43, "img": "assets/image18.jpg"}, {"name": "香菇燕", "spec": "251g/袋", "price_pre": 22, "price_incl": 25, "img": "assets/image19.jpg"}, {"name": "虾燕", "spec": "251g/袋", "price_pre": 31, "price_incl": 35, "img": "assets/image20.jpg"}, {"name": "鱼丸", "spec": "256g/袋", "price_pre": 20, "price_incl": 23, "img": "assets/image22.jpg"}, {"name": "牛肉滑", "spec": "250g/袋", "price_pre": 25, "price_incl": 28, "img": "assets/image21.jpg"}, {"name": "鲜燕丝", "spec": "250g/袋", "price_pre": 20, "price_incl": 23, "img": "assets/image23.jpg"}, {"name": "鲜燕皮", "spec": "500g", "price_pre": 44, "price_incl": 50, "img": "assets/image24.jpg"}]}, {"id": "seafood", "nav": "生鲜", "title": "生鲜系列", "num": "07", "layout": "seafood", "grid": "grid-1", "badge": "海鲜礼盒", "unit": "", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "2026款时来运转礼盒（A38）", "spec": "三去黄花鱼1000g/包\n三文鱼500g/包 \n清蒸黄花鱼455g/包 \n东海鲳鱼（2条）450g/包东海带鱼段1000g/包\n 比目鱼300g/包\n蒲烧鳗鱼400g/包\n速冻去脏鲍鱼230g/包\n速冻鱿鱼400g/包\n 银鳕鱼片300g/包 \n单冻刺参250g/包\n北极甜虾500g/包", "price_pre": 922, "price_incl": 953, "img": "assets/image73.png"}, {"name": "2026款财华无限礼盒（A5）", "spec": "三去黄花鱼700g/包\n速冻鱿鱼400g/包 \n东海带鱼段1000g/包\n东海鲳鱼（3条）450g/包\n蒲烧鳗鱼180g/包\n比目鱼300g/包\n醇香黄鱼鲞400g/包\n熟冻黑虎虾300g/包\n扇贝柱300g/包 \n速冻去脏鲍鱼230g/包", "price_pre": 515, "price_incl": 533, "img": "assets/image74.png"}, {"name": "2026款大吉大利礼盒（A37）", "spec": "清蒸黄花鱼455g/包\n清蒸海鲈鱼555g/包\n 白灼对虾400g/包\n东海鲳鱼（3条）450g/包醇香黄鱼鲞350g/包\n蒲烧鳗鱼段180g/包\n速冻去脏鲍鱼230g/包", "price_pre": 347, "price_incl": 359, "img": "assets/image75.png"}, {"name": "2026款海鲜家宴礼盒（A34）", "spec": "三去海鲈鱼450g/包\n三去黄花鱼450g/包\n蒲烧鳗鱼段180g/包\n海捕小鱿鱼350g/包\n白灼对虾400g/包\n东海鲳鱼（5条）550g/包", "price_pre": 289, "price_incl": 299, "img": "assets/image76.png"}, {"name": "非遗黄鱼鲞（干）礼盒1.04kg(A70)", "spec": "黄鱼鲞（干）260g/4包", "price_pre": 289, "price_incl": 299, "img": "assets/image77.jpg"}, {"name": "野化黄花鱼礼盒1.3kg（A40）", "spec": "野化黄花鱼650g/2包", "price_pre": 176, "price_incl": 180, "img": "assets/image1.png"}]}, {"id": "ftq", "nav": "佛跳墙", "title": "佛跳墙系列", "num": "08", "layout": "ftq", "grid": "grid-1", "badge": "佛跳墙", "unit": "含税", "fumao_label": "53度福矛窖酒·5", "products": [{"name": "十参十鲍龙虾(带锅带礼盒)", "spec": "海参(刺参)25g\n  鲍鱼(黑边肉)9-11g\n龙虾1只\n辅材：杏鲍菇、虾味丸、竹耳丝、花菇、鱼胶、螺片、鲍汁", "price_pre": 255, "price_incl": 258, "img": "assets/image2.jpg"}, {"name": "十参十鲍十虾(刺参黑边肉)", "spec": "海参(刺参)25g\n鲍鱼(黑边肉)9-11g\n虾10只\n辅材：杏鲍菇、虾味丸、竹耳丝、花菇、花胶、螺片、鲍汁", "price_pre": 196, "price_incl": 198, "img": "assets/image3.jpg"}, {"name": "刺参鲍鱼花胶鸡", "spec": "半只三黄鸡\n6只海参(刺参)20-25g\n6只鲍鱼(黑边肉)11-13g\n辅材：鱼胶、虾丸、金汤", "price_pre": 166, "price_incl": 168, "img": "assets/image4.jpg"}, {"name": "A款至尊款罐装佛跳墙(辽参)", "spec": "220g*6罐（\n海参（辽参），黄金鲍，金钩翅，元贝，鱼胶，猪蹄，花菇，杏鲍菇）", "price_pre": 394, "price_incl": 398, "img": "assets/image5.jpg"}, {"name": "B款富贵罐装佛跳墙(辽参)", "spec": "220g*6罐（海参（辽参），黄金鲍，花胶，扇贝，香菇，素鱼翅，杏鲍菇）", "price_pre": 295, "price_incl": 298, "img": "assets/image6.jpg"}]}]}</script>
+
+<script>
+(function() {
+"use strict";
+
+/* ========== 基础工具 ========== */
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function $(id) { return document.getElementById(id); }
+function toast(msg) {
+  var t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function() { t.classList.remove('show'); }, 2600);
+}
+function parseNum(s) {
+  if (s === null || s === undefined) return null;
+  s = String(s).trim();
+  if (s === '') return null;
+  if (/^-?\d+(\.\d+)?$/.test(s)) {
+    var n = parseFloat(s);
+    return Number.isInteger(n) ? n : n;
+  }
+  return s;
+}
+function fmtPrice(v) {
+  if (v === null || v === undefined || v === '') return '';
+  if (typeof v === 'string') return v;
+  if (Number.isInteger(v)) return String(v);
+  return String(v.toFixed(2).replace(/\.?0+$/, ''));
+}
+
+/* ========== 素材（来自线上页面） ========== */
+var PAGE_CSS = $('tpl-css').textContent;
+var PAGE_BODY = $('tpl-body').textContent;
+var PAGE_RENDER_JS = $('tpl-renderjs').textContent;
+var EMBEDDED = JSON.parse($('tpl-embedded').textContent);
+
+/* ========== 状态 ========== */
+var LS_DATA = 'bwl_admin_data_v2';
+var LS_PIN = 'bwl_admin_pin_v2';
+var SS_UNLOCK = 'bwl_admin_unlocked';
+
+function defaultPin() { return '123456'; }
+function getPin() { return localStorage.getItem(LS_PIN) || defaultPin(); }
+function setPin(p) { localStorage.setItem(LS_PIN, p); }
+
+var state = null;
+var ui = { selCat: 0, selProd: 0 };
+
+function loadState() {
+  var raw = localStorage.getItem(LS_DATA);
+  if (raw) {
+    try {
+      var d = JSON.parse(raw);
+      if (d && d.meta && d.categories) { state = d; return; }
+    } catch (e) {}
+  }
+  state = JSON.parse(JSON.stringify(EMBEDDED));
+}
+function saveDraft() {
+  try { localStorage.setItem(LS_DATA, JSON.stringify(state)); } catch (e) {}
+  var t = $('draftState');
+  t.textContent = '✓ 草稿已自动保存';
+  clearTimeout(t._timer2);
+  t._timer2 = setTimeout(function() { t.textContent = ''; }, 2500);
+}
+function saveDraftSilent() {
+  try { localStorage.setItem(LS_DATA, JSON.stringify(state)); } catch (e) {}
+}
+
+/* ========== 登录 ========== */
+function checkUnlock() {
+  if (sessionStorage.getItem(SS_UNLOCK) === '1') {
+    $('lockScreen').style.display = 'none';
+  }
+}
+function lock() {
+  sessionStorage.removeItem(SS_UNLOCK);
+  $('lockScreen').style.display = 'flex';
+  $('pinInput').value = '';
+  $('pinErr').textContent = '';
+}
+$('pinBtn').addEventListener('click', function() {
+  var v = $('pinInput').value;
+  if (v === getPin()) {
+    sessionStorage.setItem(SS_UNLOCK, '1');
+    $('lockScreen').style.display = 'none';
+    toast('欢迎回来');
+  } else {
+    $('pinErr').textContent = '密码错误，请重试';
+  }
+});
+$('pinInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') $('pinBtn').click(); });
+
+/* ========== 渲染分类列表 ========== */
+function renderCats() {
+  var html = '';
+  state.categories.forEach(function(c, i) {
+    html += '<div class="cat-item' + (i === ui.selCat ? ' sel' : '') + '" data-i="' + i + '">'
+      + '<span class="ci-name">' + esc(c.nav || c.title) + '</span>'
+      + '<span class="ci-count">' + (c.products ? c.products.length : 0) + '</span>'
+      + '<span class="ci-act">'
+      + '<button class="up" title="上移">↑</button>'
+      + '<button class="down" title="下移">↓</button>'
+      + '<button class="del" title="删除分类">✕</button>'
+      + '</span></div>';
+  });
+  $('catList').innerHTML = html;
+  $('curCatTitle').textContent = state.categories[ui.selCat] ? state.categories[ui.selCat].title : '—';
+}
+
+function bindCatEvents() {
+  var list = $('catList');
+  list.onclick = function(e) {
+    var btn = e.target.closest('button');
+    var item = e.target.closest('.cat-item');
+    if (!item) return;
+    var i = parseInt(item.getAttribute('data-i'), 10);
+    if (btn) {
+      e.stopPropagation();
+      if (btn.classList.contains('up')) moveCat(i, -1);
+      else if (btn.classList.contains('down')) moveCat(i, 1);
+      else if (btn.classList.contains('del')) delCat(i);
+      return;
+    }
+    ui.selCat = i; ui.selProd = 0;
+    renderCats(); renderProds(); renderEditor();
+  };
+}
+function moveCat(i, d) {
+  var j = i + d;
+  if (j < 0 || j >= state.categories.length) return;
+  var arr = state.categories;
+  var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  ui.selCat = j;
+  saveDraft(); renderCats(); renderProds(); renderEditor();
+}
+function delCat(i) {
+  if (!confirm('确定删除分类「' + state.categories[i].nav + '」及其全部 ' + state.categories[i].products.length + ' 个产品？')) return;
+  state.categories.splice(i, 1);
+  if (ui.selCat >= state.categories.length) ui.selCat = state.categories.length - 1;
+  if (ui.selCat < 0) ui.selCat = 0;
+  ui.selProd = 0;
+  saveDraft(); renderCats(); renderProds(); renderEditor();
+}
+$('btnAddCat').addEventListener('click', function() {
+  var n = state.categories.length + 1;
+  var id = 'cat' + Date.now();
+  state.categories.push({
+    id: id, nav: '新分类' + n, title: '新分类' + n, num: String(n).padStart(2, '0'),
+    layout: 'standard', grid: 'grid-2', badge: '精选', unit: '', fumao_label: '', products: []
+  });
+  ui.selCat = state.categories.length - 1; ui.selProd = 0;
+  saveDraft(); renderCats(); renderProds(); renderEditor();
+  toast('已新增分类，可点击编辑名称');
+});
+
+/* ========== 渲染产品列表 ========== */
+function renderProds() {
+  var cat = state.categories[ui.selCat];
+  if (!cat) { $('prodList').innerHTML = '<p style="color:#9a9a9a;font-size:13px">请先新增一个分类</p>'; return; }
+  var html = '';
+  cat.products.forEach(function(p, i) {
+    var img = p.img ? '<img src="' + esc(p.img) + '" alt="">' : '<span class="noimg">无图</span>';
+    var priceTxt = fmtPrice(p.price_incl);
+    html += '<div class="prod-item' + (i === ui.selProd ? ' sel' : '') + '" data-i="' + i + '">'
+      + '<span class="pi-thumb">' + img + '</span>'
+      + '<span class="pi-info">'
+      + '<span class="pi-name">' + (i + 1) + '. ' + esc(p.name) + '</span>'
+      + '<span class="pi-meta">' + (priceTxt ? '¥' + esc(priceTxt) : '价格面议') + (p.spec ? ' · ' + esc(String(p.spec).split('\n')[0].slice(0, 20)) : '') + '</span>'
+      + '</span>'
+      + '<span class="pi-act">'
+      + '<button class="up" title="上移">↑</button>'
+      + '<button class="down" title="下移">↓</button>'
+      + '<button class="del" title="删除">✕</button>'
+      + '</span></div>';
+  });
+  $('prodList').innerHTML = html;
+}
+
+function bindProdEvents() {
+  var list = $('prodList');
+  list.onclick = function(e) {
+    var btn = e.target.closest('button');
+    var item = e.target.closest('.prod-item');
+    if (!item) return;
+    var i = parseInt(item.getAttribute('data-i'), 10);
+    if (btn) {
+      e.stopPropagation();
+      if (btn.classList.contains('up')) moveProd(i, -1);
+      else if (btn.classList.contains('down')) moveProd(i, 1);
+      else if (btn.classList.contains('del')) delProd(i);
+      return;
+    }
+    ui.selProd = i;
+    renderProds(); renderEditor();
+  };
+}
+function moveProd(i, d) {
+  var cat = state.categories[ui.selCat];
+  var j = i + d;
+  if (j < 0 || j >= cat.products.length) return;
+  var t = cat.products[i]; cat.products[i] = cat.products[j]; cat.products[j] = t;
+  ui.selProd = j;
+  saveDraft(); renderProds(); renderEditor();
+}
+function delProd(i) {
+  var cat = state.categories[ui.selCat];
+  if (!confirm('确定删除产品「' + cat.products[i].name + '」？')) return;
+  cat.products.splice(i, 1);
+  if (ui.selProd >= cat.products.length) ui.selProd = Math.max(0, cat.products.length - 1);
+  saveDraft(); renderCats(); renderProds(); renderEditor();
+}
+$('btnAddProd').addEventListener('click', function() {
+  var cat = state.categories[ui.selCat];
+  if (!cat) { toast('请先新增分类'); return; }
+  cat.products.push({ name: '新产品', spec: '', price_pre: null, price_incl: null, img: '' });
+  ui.selProd = cat.products.length - 1;
+  saveDraft(); renderCats(); renderProds(); renderEditor();
+  toast('已新增产品，请在右侧填写信息');
+});
+$('btnDelCat').addEventListener('click', function() { delCat(ui.selCat); });
+
+/* ========== 编辑面板 ========== */
+function currentProduct() {
+  var cat = state.categories[ui.selCat];
+  if (!cat) return null;
+  return cat.products[ui.selProd] || null;
+}
+
+function renderEditor() {
+  var ed = $('editor');
+  var cat = state.categories[ui.selCat];
+  var p = currentProduct();
+  if (!cat || !p) {
+    ed.className = 'empty';
+    ed.innerHTML = '<div class="ed-placeholder">点击左侧产品进行编辑，或点击「+ 新增产品」</div>';
+    return;
+  }
+  ed.className = '';
+  var isFumao = cat.layout === 'fumao';
+  var imgBlock = isFumao
+    ? '<div class="img-note">该分类为「价格列表」样式（福茅年份卡），页面不显示图片。图片字段保留备用。</div>'
+    : '<div class="img-row">'
+      + '<div class="img-preview" id="edImgPrev">' + (p.img ? '<img src="' + esc(p.img) + '" alt="">' : '<span class="noimg">暂无图片</span>') + '</div>'
+      + '<div class="img-btns">'
+      + '<button class="ad-btn sm" id="edImgUp">上传 / 替换图片</button>'
+      + '<button class="ad-btn sm danger" id="edImgDel">移除图片</button>'
+      + '<div class="img-note">支持 jpg / png / webp，上传后自动压缩（最长边 800px）。</div>'
+      + '</div></div>';
+
+  ed.innerHTML =
+    '<div class="ed-title">' + esc(cat.title) + ' · 编辑产品</div>'
+    + '<div class="cat-cfg"><h4>分类设置</h4><div class="grid2">'
+    + '<div class="field"><label>导航标签（导航栏文字）</label><input id="edCatNav" value="' + esc(cat.nav) + '"></div>'
+    + '<div class="field"><label>区块标题</label><input id="edCatTitle" value="' + esc(cat.title) + '"></div>'
+    + '<div class="field"><label>编号</label><input id="edCatNum" value="' + esc(cat.num) + '" style="max-width:80px"></div>'
+    + '<div class="field"><label>卡片样式</label><select id="edCatLayout">'
+    + ['standard|标准卡片', 'wine|红酒卡片', 'fumao|福茅价格列表', 'tea|茶叶卡片', 'cigarette|名烟卡片', 'seafood|生鲜宽卡', 'ftq|佛跳墙宽卡']
+        .map(function(o) { var a = o.split('|'); return '<option value="' + a[0] + '"' + (cat.layout === a[0] ? ' selected' : '') + '>' + a[1] + '</option>'; }).join('')
+    + '</select></div>'
+    + '<div class="field"><label>卡片角标（badge）</label><input id="edCatBadge" value="' + esc(cat.badge || '') + '"></div>'
+    + '<div class="field"><label>价格单位（如 /条、含税）</label><input id="edCatUnit" value="' + esc(cat.unit || '') + '"></div>'
+    + '</div>'
+    + (cat.layout === 'fumao' ? '<div class="field" style="margin-top:10px"><label>卡片副文字（福茅卡）</label><input id="edCatFumaoLabel" value="' + esc(cat.fumao_label || '') + '"></div>' : '')
+    + '<div class="img-note" style="margin-top:8px">提示：修改「卡片样式」会改变该分类所有产品的展示版式；红酒/茶叶的角标按产品名称自动判断。</div>'
+    + '</div>'
+    + '<div class="field"><label>产品名称</label><input id="edName" value="' + esc(p.name) + '"></div>'
+    + '<div class="field"><label>规格说明（可换行，多行会自动分行展示）</label><textarea id="edSpec">' + esc(p.spec) + '</textarea></div>'
+    + '<div class="field"><label>价格（含税）<span class="hint">　可填数字，或文本（如「7.8折」）</span></label><input id="edPriceIncl" value="' + esc(fmtPrice(p.price_incl)) + '"></div>'
+    + '<div class="field"><label>价格（不含税）<span class="hint">　留空时按含税价÷1.13 自动估算；可手动修改</span></label><input id="edPricePre" value="' + esc(fmtPrice(p.price_pre)) + '"></div>'
+    + '<div class="field"><label>产品图片</label>' + imgBlock + '</div>'
+    + '<div class="form-foot">'
+    + '<button class="ad-btn danger" id="edDelete">删除此产品</button>'
+    + '</div>';
+
+  /* 分类字段绑定 */
+  bindField($('edCatNav'), function(v) { cat.nav = v; saveDraft(); renderCats(); });
+  bindField($('edCatTitle'), function(v) { cat.title = v; saveDraft(); renderCats(); $('curCatTitle').textContent = v; });
+  bindField($('edCatNum'), function(v) { cat.num = v; saveDraft(); });
+  $('edCatLayout').addEventListener('change', function() {
+    cat.layout = this.value;
+    cat.grid = (this.value === 'fumao') ? 'fumao-grid' : ((this.value === 'seafood' || this.value === 'ftq') ? 'grid-1' : 'grid-2');
+    saveDraft(); renderEditor();
+  });
+  bindField($('edCatBadge'), function(v) { cat.badge = v; saveDraft(); });
+  bindField($('edCatUnit'), function(v) { cat.unit = v; saveDraft(); });
+  if ($('edCatFumaoLabel')) bindField($('edCatFumaoLabel'), function(v) { cat.fumao_label = v; saveDraft(); });
+
+  /* 产品字段绑定 */
+  bindField($('edName'), function(v) { p.name = v; saveDraft(); renderProds(); });
+  bindField($('edSpec'), function(v) { p.spec = v; saveDraft(); renderProds(); });
+  bindField($('edPriceIncl'), function(v) { p.price_incl = parseNum(v); saveDraft(); renderProds(); });
+  bindField($('edPricePre'), function(v) { p.price_pre = parseNum(v); saveDraft(); renderProds(); });
+
+  /* 图片 */
+  var upBtn = $('edImgUp');
+  if (upBtn) upBtn.addEventListener('click', function() { $('fileImg').click(); });
+  var delBtn = $('edImgDel');
+  if (delBtn) delBtn.addEventListener('click', function() {
+    p.img = ''; saveDraft();
+    var prev = $('edImgPrev'); if (prev) prev.innerHTML = '<span class="noimg">暂无图片</span>';
+    renderProds();
+    toast('已移除图片');
+  });
+  var delProdBtn = $('edDelete');
+  if (delProdBtn) delProdBtn.addEventListener('click', function() { delProd(ui.selProd); });
+
+  /* 上传文件 */
+  $('fileImg').onchange = function() {
+    var f = this.files[0];
+    this.value = '';
+    if (!f) return;
+    compressImage(f, function(dataUrl) {
+      p.img = dataUrl;
+      saveDraft();
+      var prev = $('edImgPrev');
+      if (prev) prev.innerHTML = '<img src="' + esc(dataUrl) + '" alt="">';
+      renderProds();
+      toast('图片已替换，记得导出发布');
+    });
+  };
+}
+
+function bindField(el, fn) {
+  if (!el) return;
+  el.addEventListener('input', function() { fn(this.value); });
+}
+
+/* 图片压缩 */
+function compressImage(file, cb) {
+  var img = new Image();
+  var url = URL.createObjectURL(file);
+  img.onload = function() {
+    var MAX = 800;
+    var w = img.width, h = img.height;
+    if (w > MAX || h > MAX) {
+      if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+      else { w = Math.round(w * MAX / h); h = MAX; }
+    }
+    var canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    var ctx = canvas.getContext('2d');
+    var isPng = /png/i.test(file.type);
+    if (!isPng) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); }
+    ctx.drawImage(img, 0, 0, w, h);
+    var dataUrl = canvas.toDataURL(isPng ? 'image/png' : 'image/jpeg', 0.85);
+    URL.revokeObjectURL(url);
+    cb(dataUrl);
+  };
+  img.onerror = function() { URL.revokeObjectURL(url); alert('图片读取失败，请换一张试试'); };
+  img.src = url;
+}
+
+/* ========== 站点信息 ========== */
+$('btnMeta').addEventListener('click', function() {
+  $('mTitleA').value = state.meta.title_a || '';
+  $('mTitleB').value = state.meta.title_b || '';
+  $('mMark').value = state.meta.mark || '';
+  $('mSubtitle').value = state.meta.subtitle || '';
+  $('mNotice').value = state.meta.notice || '';
+  $('mIntro').value = state.meta.intro || '';
+  $('metaModal').classList.add('show');
+});
+$('metaCancel').addEventListener('click', function() { $('metaModal').classList.remove('show'); });
+$('metaSave').addEventListener('click', function() {
+  state.meta.title_a = $('mTitleA').value;
+  state.meta.title_b = $('mTitleB').value;
+  state.meta.mark = $('mMark').value;
+  state.meta.subtitle = $('mSubtitle').value;
+  state.meta.notice = $('mNotice').value;
+  state.meta.intro = $('mIntro').value;
+  saveDraft();
+  $('metaModal').classList.remove('show');
+  toast('站点信息已保存，记得导出发布');
+});
+
+/* ========== 修改密码 ========== */
+$('btnPin').addEventListener('click', function() {
+  $('pOld').value = ''; $('pNew').value = ''; $('pNew2').value = '';
+  $('pinModal').classList.add('show');
+});
+$('pinCancel').addEventListener('click', function() { $('pinModal').classList.remove('show'); });
+$('pinSave').addEventListener('click', function() {
+  var o = $('pOld').value, n = $('pNew').value, n2 = $('pNew2').value;
+  if (o !== getPin()) { alert('当前密码错误'); return; }
+  if (n.length < 4) { alert('新密码至少 4 位'); return; }
+  if (n !== n2) { alert('两次输入的新密码不一致'); return; }
+  setPin(n);
+  $('pinModal').classList.remove('show');
+  toast('密码已修改');
+});
+
+/* ========== 导出 ========== */
+$('btnExport').addEventListener('click', function() {
+  var blob = new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'products.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+  toast('已导出 products.json —— 把它发回给小助手即可更新线上页面');
+});
+
+/* ========== 导入 ========== */
+$('btnImport').addEventListener('click', function() { $('fileImport').click(); });
+$('fileImport').addEventListener('change', function() {
+  var f = this.files[0];
+  this.value = '';
+  if (!f) return;
+  var r = new FileReader();
+  r.onload = function() {
+    try {
+      var d = JSON.parse(r.result);
+      if (!d || !d.meta || !d.categories || !Array.isArray(d.categories)) throw new Error('bad');
+      state = d;
+      ui.selCat = 0; ui.selProd = 0;
+      saveDraft(); renderCats(); renderProds(); renderEditor();
+      toast('导入成功，已替换当前数据');
+    } catch (e) { alert('文件格式不正确，请选择导出的 products.json'); }
+  };
+  r.readAsText(f);
+});
+
+/* ========== 在线保存 ========== */
+var LS_API = 'gift_admin_api';
+var LS_TOKEN = 'gift_admin_token';
+function getOnlineCfg() {
+  return { api: localStorage.getItem(LS_API) || '', token: localStorage.getItem(LS_TOKEN) || '' };
+}
+function setOnlineCfg(api, token) {
+  localStorage.setItem(LS_API, api);
+  localStorage.setItem(LS_TOKEN, token);
+}
+$('btnOnlineCfg').addEventListener('click', function() {
+  var cfg = getOnlineCfg();
+  $('ocApi').value = cfg.api;
+  $('ocToken').value = cfg.token;
+  $('onlineModal').classList.add('show');
+});
+$('ocCancel').addEventListener('click', function() { $('onlineModal').classList.remove('show'); });
+$('ocSave').addEventListener('click', function() {
+  setOnlineCfg($('ocApi').value.trim(), $('ocToken').value.trim());
+  $('onlineModal').classList.remove('show');
+  toast('在线保存设置已保存');
+});
+$('ocTest').addEventListener('click', function() {
+  var api = $('ocApi').value.trim();
+  if (!api) { alert('请先填写 API 地址'); return; }
+  var btn = $('ocTest'), old = btn.textContent;
+  btn.disabled = true; btn.textContent = '测试中…';
+  fetch(api, { cache: 'no-cache' })
+    .then(function(r) { return r.json().catch(function() { return {}; }); })
+    .then(function(j) {
+      if (j && (j.meta || j.categories)) toast('连接成功，可以正常读取数据');
+      else toast('连接成功，数据为空（首次使用请先点「保存到线上」）');
+    })
+    .catch(function(e) { toast('连接失败：' + e.message); })
+    .finally(function() { btn.disabled = false; btn.textContent = old; });
+});
+$('btnOnline').addEventListener('click', function() {
+  var cfg = getOnlineCfg();
+  if (!cfg.api) { toast('请先在「在线设置」填写 API 地址'); $('btnOnlineCfg').click(); return; }
+  var btn = $('btnOnline'), old = btn.textContent;
+  btn.disabled = true; btn.textContent = '保存中…';
+  fetch(cfg.api, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Auth-Token': cfg.token },
+    body: JSON.stringify(state)
+  })
+    .then(function(r) { return r.json().catch(function() { return {}; }).then(function(j) { return { status: r.status, j: j }; }); })
+    .then(function(res) {
+      if (res.j && res.j.ok) toast('已保存到线上，刷新落地页即可看到新版');
+      else if (res.status === 401) toast('保存失败：密码错误，请在「在线设置」中检查保存密码');
+      else toast('保存失败：' + ((res.j && res.j.message) || ('HTTP ' + res.status)));
+    })
+    .catch(function(e) { toast('网络错误：' + e.message); })
+    .finally(function() { btn.disabled = false; btn.textContent = old; });
+});
+
+/* ========== 预览 ========== */
+var pvWidth = 390;
+$('btnPreview').addEventListener('click', function() {
+  $('previewOverlay').classList.add('show');
+  refreshPreview();
+});
+$('pvClose').addEventListener('click', function() { $('previewOverlay').classList.remove('show'); });
+document.querySelectorAll('#previewOverlay .pv-bar button[data-w]').forEach(function(b) {
+  b.addEventListener('click', function() {
+    document.querySelectorAll('#previewOverlay .pv-bar button').forEach(function(x) { x.classList.remove('on'); });
+    this.classList.add('on');
+    var w = this.getAttribute('data-w');
+    var frame = $('pvFrame');
+    if (w === 'full') { frame.style.width = '100%'; pvWidth = 'full'; }
+    else { frame.style.width = w + 'px'; pvWidth = w; }
+  });
+});
+function refreshPreview() {
+  var frame = $('pvFrame');
+  var doc = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">'
+    + '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+    + '<style>' + PAGE_CSS + '</style></head><body>'
+    + PAGE_BODY
+    + '<scr' + 'ipt>var __EMBEDDED__=' + JSON.stringify(state) + ';' + PAGE_RENDER_JS + '</scr' + 'ipt>'
+    + '</body></html>';
+  frame.srcdoc = doc;
+  frame.style.width = (pvWidth === 'full' ? '100%' : pvWidth + 'px');
+}
+
+/* ========== 锁定 ========== */
+$('btnLock').addEventListener('click', lock);
+
+/* ========== 初始化 ========== */
+loadState();
+checkUnlock();
+bindCatEvents();
+bindProdEvents();
+renderCats();
+renderProds();
+renderEditor();
+})();
+</script>
+<div id="toast"></div>
+</body>
+</html>
