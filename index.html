@@ -526,18 +526,8 @@ function footHtml(price, unit, pre) {
 }
 
 function renderWine(c, p) {
-  var badge = p.badge;
-  if (!badge) {
-    var prefix = /奔富/.test(p.name) ? '奔富' : '红酒';
-    var tier = '';
-    if (typeof p.price_incl === 'number') {
-      tier = p.price_incl < 300 ? '入门臻选' : (p.price_incl < 800 ? '进阶佳酿' : '名庄珍藏');
-    }
-    badge = tier ? (prefix + ' · ' + tier) : prefix;
-  }
   var spec = String(p.spec || '').replace('750ml/瓶', '750ml');
   return '<div class="card reveal">' + imgHtml(p.img, p.name)
-    + '<span class="card-badge">' + esc(badge) + '</span>'
     + '<p class="card-name">' + esc(p.name) + '</p>'
     + specHtml(spec)
     + footHtml(p.price_incl, c.unit, p.price_pre) + '</div>';
@@ -566,15 +556,7 @@ function renderTea(c, p) {
       + '<div class="discount-row"><span class="discount-label">采购折扣</span><span class="discount-val">' + esc(price) + '</span></div>'
       + specHtml(p.spec) + '</div>';
   }
-  var badge = p.badge;
-  if (!badge) {
-    if (/白茶/.test(p.name)) badge = '政和白茶';
-    else if (/茉莉/.test(p.name) || /春伦/.test(p.name)) badge = '茉莉花茶';
-    else if (/窖/.test(p.name)) badge = '窖藏茶';
-    else badge = '茶叶';
-  }
   return '<div class="card reveal">' + imgHtml(p.img, p.name)
-    + '<span class="card-badge">' + esc(badge) + '</span>'
     + '<p class="card-name">' + esc(p.name) + '</p>'
     + specHtml(p.spec)
     + footHtml(p.price_incl, c.unit, p.price_pre) + '</div>';
@@ -582,7 +564,6 @@ function renderTea(c, p) {
 
 function renderCigarette(c, p) {
   return '<div class="card reveal">' + imgHtml(p.img, p.name)
-    + '<span class="card-badge">' + esc(c.badge || '名烟') + '</span>'
     + '<p class="card-name">' + esc(p.name) + '</p>'
     + specHtml(p.spec)
     + footHtml(p.price_incl, c.unit, p.price_pre) + '</div>';
@@ -590,7 +571,6 @@ function renderCigarette(c, p) {
 
 function renderStandard(c, p) {
   return '<div class="card reveal">' + imgHtml(p.img, p.name)
-    + '<span class="card-badge">' + esc(c.badge || '精选') + '</span>'
     + '<p class="card-name">' + esc(p.name) + '</p>'
     + specHtml(p.spec)
     + footHtml(p.price_incl, c.unit, p.price_pre) + '</div>';
@@ -600,7 +580,6 @@ function renderSeafood(c, p) {
   return '<div class="card reveal card-wide card-detail"><div class="detail-layout">'
     + imgHtml(p.img, p.name)
     + '<div class="detail-body">'
-    + '<span class="card-badge">' + esc(p.badge || c.badge || '海鲜礼盒') + '</span>'
     + '<p class="card-name">' + esc(p.name) + '</p>'
     + specHtml(p.spec)
     + footHtml(p.price_incl, '', p.price_pre)
@@ -611,7 +590,6 @@ function renderFtq(c, p) {
   return '<div class="card reveal card-wide card-detail"><div class="detail-layout">'
     + imgHtml(p.img, p.name)
     + '<div class="detail-body">'
-    + '<span class="card-badge">' + esc(p.badge || c.badge || '佛跳墙') + '</span>'
     + '<p class="card-name">' + esc(p.name) + '</p>'
     + specHtml(p.spec)
     + footHtml(p.price_incl, c.unit, p.price_pre)

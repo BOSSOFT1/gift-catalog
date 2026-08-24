@@ -1264,14 +1264,12 @@ function renderEditor() {
     + ['standard|标准卡片', 'wine|红酒卡片', 'fumao|福茅价格列表', 'tea|茶叶卡片', 'cigarette|名烟卡片', 'seafood|生鲜宽卡', 'ftq|佛跳墙宽卡']
         .map(function(o) { var a = o.split('|'); return '<option value="' + a[0] + '"' + (cat.layout === a[0] ? ' selected' : '') + '>' + a[1] + '</option>'; }).join('')
     + '</select></div>'
-    + '<div class="field"><label>卡片角标（badge）</label><input id="edCatBadge" value="' + esc(cat.badge || '') + '"></div>'
     + '<div class="field"><label>价格单位（如 /条、含税）</label><input id="edCatUnit" value="' + esc(cat.unit || '') + '"></div>'
     + '</div>'
     + (cat.layout === 'fumao' ? '<div class="field" style="margin-top:10px"><label>卡片副文字（福茅卡）</label><input id="edCatFumaoLabel" value="' + esc(cat.fumao_label || '') + '"></div>' : '')
-    + '<div class="img-note" style="margin-top:8px">提示：修改「卡片样式」会改变该分类所有产品的展示版式；红酒/茶叶的角标按产品名称自动判断。</div>'
+    + '<div class="img-note" style="margin-top:8px">提示：修改「卡片样式」会改变该分类所有产品的展示版式。</div>'
     + '</div>'
     + '<div class="field"><label>产品名称</label><input id="edName" value="' + esc(p.name) + '"></div>'
-    + '<div class="field"><label>产品角标<span class="hint">　留空则走分类默认规则（红酒/茶叶会自动判断）</span></label><input id="edBadge" value="' + esc(p.badge || '') + '"></div>'
     + '<div class="field"><label>规格说明（可换行，多行会自动分行展示）</label><textarea id="edSpec">' + esc(p.spec) + '</textarea></div>'
     + '<div class="field"><label>价格（含税）<span class="hint">　可填数字，或文本（如「7.8折」）</span></label><input id="edPriceIncl" value="' + esc(fmtPrice(p.price_incl)) + '"></div>'
     + '<div class="field"><label>价格（不含税）<span class="hint">　留空时按含税价÷1.13 自动估算；可手动修改</span></label><input id="edPricePre" value="' + esc(fmtPrice(p.price_pre)) + '"></div>'
@@ -1289,13 +1287,11 @@ function renderEditor() {
     cat.grid = (this.value === 'fumao') ? 'fumao-grid' : ((this.value === 'seafood' || this.value === 'ftq') ? 'grid-1' : 'grid-2');
     saveDraft(); renderEditor();
   });
-  bindField($('edCatBadge'), function(v) { cat.badge = v; saveDraft(); });
   bindField($('edCatUnit'), function(v) { cat.unit = v; saveDraft(); });
   if ($('edCatFumaoLabel')) bindField($('edCatFumaoLabel'), function(v) { cat.fumao_label = v; saveDraft(); });
 
   /* 产品字段绑定 */
   bindField($('edName'), function(v) { p.name = v; saveDraft(); renderProds(); });
-  bindField($('edBadge'), function(v) { p.badge = v.trim(); saveDraft(); renderProds(); });
   bindField($('edSpec'), function(v) { p.spec = v; saveDraft(); renderProds(); });
   bindField($('edPriceIncl'), function(v) { p.price_incl = parseNum(v); saveDraft(); renderProds(); });
   bindField($('edPricePre'), function(v) { p.price_pre = parseNum(v); saveDraft(); renderProds(); });
